@@ -80,6 +80,13 @@ class Zend_Locale_FormatTest extends PHPUnit_Framework_TestCase
         $this->assertEquals(       0.1234567, Zend_Locale_Format::getNumber(         '0,1234567', $options));
         $this->assertEquals(-1234567.12345,   Zend_Locale_Format::getNumber('-1.234.567,12345',   $options));
         $this->assertEquals( 1234567.12345,   Zend_Locale_Format::getNumber( '1.234.567,12345',   $options));
+
+        $options = array('locale' => 'de_AT', 'precision' => 1);
+        $test = Zend_Locale_Format::getNumber( '13.524,678',   $options); var_dump($test);
+        $this->assertEquals(  '13524.7',      Zend_Locale_Format::getNumber(    '13.524,678',     $options));
+
+        $options = array('locale' => 'de_AT', 'number_format' => '#.00');
+        $this->assertEquals(  '13524.67',     Zend_Locale_Format::getNumber(    '13.524,678',     $options));
     }
 
     /**
@@ -108,6 +115,51 @@ class Zend_Locale_FormatTest extends PHPUnit_Framework_TestCase
         $this->assertEquals(         '-0,75',      Zend_Locale_Format::toNumber(      -0.75,     array('locale' => 'de_DE', 'precision' => 2)));
     }
 
+    /**
+     * @dataProvider numberFormatProvider
+     */
+    public function _testCLDRPattern($expected, $value, $locale, $number_format, $precision = null) {
+        $options = compact('locale', 'number_format', 'precision');
+        $this->assertEquals($expected, Zend_Locale_Format::toNumber($value, $options));
+    }
+
+    public function numberFormatProvider() {
+        return array(
+            array( '13.547,37', 13547.3678, 'de_DE', null, 2),
+            array('1.35.47,36', 13547.3678, 'de_DE', '#,#0.00'),
+            array( '13.547,30', 13547.3,    'de_DE', '#,##0.00'),
+            array(  '13547',    13547.3678, 'de_DE', '0'),
+            array(  '13547',    13547.3678, 'de_DE', '#0'),
+            array(  '13547.37', 13547.3678, 'de_DE', '0.00'),
+            array(  '13547.37', 13547.3678, 'de_DE', '#0.00'),
+
+            array(  '¤13.547,37',   13547.3678, 'de_DE', '¤#,##0.00'),
+            array( '-¤13.547,37',  -13547.3678, 'de_DE', '¤#,##0.00'),
+            array('¤ -13.547,37',  -13547.3678, 'de_DE', '¤#,##0.00;¤ -#,##0.00'),
+            array( '(¤13.547,37)', -13547.3678, 'de_DE', '¤#,##0.00;(¤#,##0.00)'),
+
+            array( 'Pay ¤13.547,37 total', 13547.3678, 'de_DE', 'Pay ¤#,##0.00 total'),
+            array( 'Pay ¤13.548 only',     13547.678,  'de_DE', 'Pay ¤#,##0 only'),
+            array(  'Pay ¤13548 only',     13547.678,  'de_DE', 'Pay ¤#0 only'),
+            array('Loss ¤13.547,37 only', -13547.3678, 'de_DE', 'Profit ¤#,##0.00 only;Loss ¤#,##0.00 only'),
+
+            array('85.75678', 85.75678, 'de_DE', '#,##0.###'),
+            array('85.75',    85.75,    'de_DE', '#,##0.###'),
+            array('85.757',   85.75678, 'de_DE', '#,##0.###', 3),
+            array('86',       85.75678, 'de_DE', '#,##0.###', 0),
+            array('85.8',     85.75,    'de_DE', '#,##0.#'),
+            array('85.75',    85.75,    'de_DE', '#,##0.#', 2),
+            array('85.75',    85.75,    'de_DE', '#,##0.#', 3),
+
+            array('86%',     0.8575678, 'de_DE', '#,##0%'),
+            array('86,76%',  0.8575678, 'de_DE', '#,##0%', 2),
+            array('85,757%', 0.8575678, 'de_DE', '#.000%'),
+            array('85,70%',  0.857,     'de_DE', '#.00%'),
+            array(  ',86%',  0.00856,   'de_DE', '#.00%'),
+
+            array('8,56E-3', 0.00856,   'de_DE', '#E0'),
+        );
+    }
 
     /**
      * test isNumber
